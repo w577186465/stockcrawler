@@ -23,11 +23,10 @@ type RequestOption struct {
 	Head        http.Header
 	ConnTimeout time.Duration
 	Timeout     time.Duration
-	Times       int
 	Delay       time.Duration
 	Char        string
 	Data        url.Values
-	Retrytime   int
+	Retrytimes   int
 }
 
 type Response struct {
@@ -36,6 +35,7 @@ type Response struct {
 
 type Reader struct {
 	Reader io.Reader
+	Error error
 }
 
 // simple downloader
@@ -61,8 +61,7 @@ func Download(url string) *Reader {
 	}
 	if reqerr != nil {
 		fmt.Println("网页打开失败")
-		fmt.Println(reqerr)
-		return nil
+		panic(reqerr)
 	}
 
 	response := Reader{
@@ -101,7 +100,9 @@ func (reader *Reader) Jsonp() (*simplejson.Json, error) {
 }
 
 func (reader *Reader) Html() (*goquery.Document, error) {
-	return nil, errors.New("response is nil")
+	if reader.Error != nil {
+		return nil, reader.Error
+	}
 	if reader.Reader == nil {
 		return nil, errors.New("response is nil")
 	}
@@ -110,17 +111,7 @@ func (reader *Reader) Html() (*goquery.Document, error) {
 }
 
 func (option *RequestOption) Download() *Reader {
-	result := &Reader{}
-	// 默认设置
-	switch {
-	case option.Method == "":
-		option.Method = "GET"
-	case option.ConnTimeout == 0:
-		option.ConnTimeout = 10 // 连接超时
-	case option.Timeout == 0:
-		option.Timeout = 15 // 传输超时
-	}
-
+	result := &Reader{nil, nil} // 生命返回变量
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
@@ -140,9 +131,8 @@ func (option *RequestOption) Download() *Reader {
 
 	req, err := http.NewRequest(option.Method, option.Url, form) // 发起请求
 	if err != nil {
-		fmt.Println(err)
-		result.Reader = nil
-		return &Reader{Reader: nil}
+		result.Error = err
+		return result
 	}
 
 	// header
@@ -152,11 +142,10 @@ func (option *RequestOption) Download() *Reader {
 	// 请求失败重新请求
 	var reqerr error
 	var resp *http.Response
-	retry := 3 // 重新请求次数
-	for i := 0; i < retry; i++ {
-		fmt.Printf("请求失败重试：%d\r\n", i+1)
+	for i := 0; i < option.Retrytimes; i++ {
 		resp, reqerr = client.Do(req)
 		if reqerr != nil {
+			fmt.Printf("请求失败重试：%d\r\n", i+1)
 			continue
 		}
 	}
@@ -164,7 +153,7 @@ func (option *RequestOption) Download() *Reader {
 	if reqerr != nil {
 		fmt.Println("网页打开失败")
 		fmt.Println(reqerr)
-		return &Reader{Reader: nil}
+		panic(reqerr)
 	}
 
 	var rd io.Reader
@@ -176,11 +165,18 @@ func (option *RequestOption) Download() *Reader {
 		rd = resp.Body
 	}
 
-	return &Reader{rd}
+	return &Reader{rd, nil}
 }
 
 func Request(url string) *RequestOption {
-	return &RequestOption{Url: url}
+	// 默认设置
+	return &RequestOption{
+		Url: url,
+		Method: "GET",
+		ConnTimeout: 10,
+		Timeout: 15,
+		Retrytimes: 3,
+	}
 }
 
 func (req *RequestOption) Transcoding(char string) *RequestOption {
@@ -189,6 +185,6 @@ func (req *RequestOption) Transcoding(char string) *RequestOption {
 }
 
 func (req *RequestOption) Retry(n int) *RequestOption {
-	req.Retrytime = n
+	req.Retrytimes = n
 	return req
 }

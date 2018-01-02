@@ -3,7 +3,7 @@ package crawler
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
-	// _ "github.com/jinzhu/gorm/dialects/sqlite"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"os"
 )
 
@@ -16,6 +16,10 @@ type Modules struct {
 	Alias string
 }
 
+func init () {
+	ConnectDB("/home/vsuper/work/go/src/stockcrawler/crawler.db")
+}
+
 func ConnectDB(f string) *gorm.DB {
 	var err error
 	DB, err = gorm.Open("sqlite3", f)
@@ -24,12 +28,4 @@ func ConnectDB(f string) *gorm.DB {
 		os.Exit(1)
 	}
 	return DB
-}
-
-// 初始化数据库
-func InitDB() {
-	if DB.HasTable(&Modules{}) {
-		return
-	}
-	DB.CreateTable(&Modules{}) // 创建
 }

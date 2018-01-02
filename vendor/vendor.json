@@ -9,6 +9,11 @@
 			"revisionTime": "2017-12-12T14:42:09Z"
 		},
 		{
+			"checksumSHA1": "Q5Zi1CcXuR6lnGyFmrQ0S2DzlOQ=",
+			"path": "crawlers",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "ryj0CA/vg2WAw84IUXYvHc/osYI=",
 			"origin": "crawler/vendor/github.com/PuerkitoBio/goquery",
 			"path": "github.com/PuerkitoBio/goquery",
@@ -21,6 +26,12 @@
 			"path": "github.com/andybalholm/cascadia",
 			"revision": "8bb880573cd6bd9a0488c4ef87582b2472ed5f91",
 			"revisionTime": "2017-12-12T14:42:09Z"
+		},
+		{
+			"checksumSHA1": "fAz62j7vR7Q1DPMQRY/jHDjmEMc=",
+			"path": "github.com/axgle/mahonia",
+			"revision": "0c44128a83abf861873f8f4ec81fe58ff1cf6ea4",
+			"revisionTime": "2017-08-26T12:16:38Z"
 		},
 		{
 			"checksumSHA1": "HH2/aYk2z7YEcNSZBwYTaQEPPq8=",
@@ -74,5 +85,5 @@
 			"revisionTime": "2017-12-12T14:42:09Z"
 		}
 	],
-	"rootPath": "share"
+	"rootPath": "stockcrawler"
 }

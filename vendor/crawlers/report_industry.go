@@ -1,11 +1,11 @@
-package crawler
+package crawlers
 
 import (
 	"crawler"
 	"crypto/md5"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"share/crawlers/models"
+	"crawlers/models"
 	"strings"
 	"time"
 )
@@ -67,6 +67,10 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 		}
 
 		for _, v := range arr {
+			// 定义模块
+			var m crawler.Module
+			m.Name = "industry"
+
 			item := v.(string)
 
 			var report models.ReportIndustry
@@ -89,7 +93,7 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 
 			contenturl := fmt.Sprintf("http://data.eastmoney.com/report/%s/hy,%s.html", day, arr[2])
 			report.Content = getcontent(contenturl)
-			fmt.Println(report)
+			m.Addlink(contenturl, report.Hash)
 		}
 	}
 
@@ -99,30 +103,18 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 func getcontent(url string) string {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err) // 这里的err其实就是panic传入的内容，55
+			fmt.Println(err)
 		}
 	}()
-	html, _ := crawler.Request(url).Transcoding("gbk").Download().Html()
+	html, err := crawler.Request(url).Retry(5).Transcoding("gbk").Download().Html()
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
 	content, err := html.Find(".newsContent").Html()
 	if err != nil {
 		fmt.Println(err)
-		return "sdfsdf"
+		return ""
 	}
 	return content
-	// var content string
-	// req := request.Request{
-	//   Url:  url,
-	//   Char: "gbk",
-	// }
-	// document, err := request.NewDocument(&req)
-	// if err != nil {
-	//   fmt.Println(err)
-	//   return content
-	// }
-	// content, err = document.Find(".newsContent").Html()
-	// if err != nil {
-	//   fmt.Println(err)
-	//   return content
-	// }
-	// return strings.TrimSpace(content)
 }
