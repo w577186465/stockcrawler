@@ -1,7 +1,7 @@
 package crawler
 
 import (
-	"time"
+	// "time"
 )
 
 // 链接库
@@ -10,5 +10,9 @@ type Link struct {
 	Link      string
 	Hash      string `gorm:"type:char(64);unique_index"`
 	State     int
-	CreatedAt time.Time
+}
+
+type Hash struct {
+	ID        uint
+	Hash      string `gorm:"type:char(64);unique_index"`
 }
