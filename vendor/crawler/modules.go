@@ -5,22 +5,32 @@ import (
 )
 
 type Module struct {
+	Id int
 	Name string
+	Alias string
 	HashTable string
 	DataTable string
 }
 
+// 初始化数据库
+func Initdb() {
+	if DB.HasTable("modules") {
+		fmt.Println("操作执行过了")
+		return
+	}
+	DB.CreateTable(&Module{}) // 创建模块
+	fmt.Println("初始化成功")
+}
+
 // 获取模块信息
 func GetModule (name string) Module {
-	return Module{
-		name,
-		name + "_hashs",
-		name + "_datas",
-	}
+	module := Module{Name: name}
+	DB.Find(&module)
+	return module
 }
 
 // 创建模块 参数：name模块名称，model信息库Model
-func CreateModule(link bool, name string, model interface{}) {
+func CreateModule(link bool, name string, alias string, model interface{}) {
 	dataTable := fmt.Sprintf("%s_data", name)  // 信息库表名
 	linkTable := fmt.Sprintf("%s_hashs", name) // 链接库表名
 
@@ -34,6 +44,8 @@ func CreateModule(link bool, name string, model interface{}) {
 	} else {
 		CreateHashTable(linkTable) // 创建链接库
 	}
+
+	DB.Create(&Module{Name: name, Alias: alias, HashTable: linkTable, DataTable: dataTable})
 	
 
 	fmt.Printf("%s模块创建成功\r\n", name)

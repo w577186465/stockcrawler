@@ -5,18 +5,24 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"crawlers/models"
+	"crawlers/model"
 	"strings"
 	"time"
 )
 
 type ReportIndustry struct {
+	Name string
 	Pagesize int
 }
 
 func (m *ReportIndustry) Run() {
 	set := m
 	set.Pagesize = 200
+
+	// 创建抓取模块
+	if crawler.GetModule(set.Name).Id > 0 {
+		crawler.CreateModule(true, set.Name, "行业研报", &model.ReportIndustry{})
+	}
 	pagesize := set.Pagesize
 	fmt.Println("正在抓取行业研报")
 	pageNum, ok := m.pages(pagesize) // 获取分页数
@@ -73,7 +79,7 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 
 			item := v.(string)
 
-			var report models.ReportIndustry
+			var report model.ReportIndustry
 
 			arr := strings.Split(item, ",")
 			t, _ := time.ParseInLocation("2006/1/2 15:04:05", arr[1], time.Local) // 将时间转换为时间类型
