@@ -2,27 +2,33 @@ package crawlers
 
 import (
 	"crawler"
+	"crawlers/model"
 	"crypto/md5"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"crawlers/model"
 	"strings"
 	"time"
 )
 
 type ReportIndustry struct {
-	Name string
+	Name     string
 	Pagesize int
+}
+
+type TestModel struct {
+	ID      uint
+	Content string
 }
 
 func (m *ReportIndustry) Run() {
 	set := m
 	set.Pagesize = 200
-
 	// 创建抓取模块
-	if crawler.GetModule(set.Name).Id > 0 {
-		crawler.CreateModule(true, set.Name, "行业研报", &model.ReportIndustry{})
+	if crawler.GetModule(set.Name).Id == 0 {
+		fmt.Print("正在创建模块\n")
+		crawler.CreateModule(false, "report_industry", "测试", &model.ReportIndustry{})
 	}
+
 	pagesize := set.Pagesize
 	fmt.Println("正在抓取行业研报")
 	pageNum, ok := m.pages(pagesize) // 获取分页数
@@ -54,16 +60,23 @@ func (m *ReportIndustry) pages(pagesize int) (int, bool) {
 }
 
 func (m ReportIndustry) list(page int) (*simplejson.Json, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("get list fail")
+			fmt.Println(err)
+		}
+	}()
 	pagesize := m.Pagesize
 	url := fmt.Sprintf(`http://datainterface.eastmoney.com//EM_DataCenter/js.aspx?type=SR&sty=HYSR&mkt=0&stat=0&cmd=4&code=&sc=&ps=%d&p=%d&js={"data":[(x)],"pages":(pc),"update":"(ud)","count":(count)}`, pagesize, page)
-	return crawler.Download(url).Json()
+	return crawler.Request(url).Retry(10).Delay(10).Download().Json()
 }
 
 func (m ReportIndustry) parsehyreport(pageNum int) bool {
 	for page := 1; page <= pageNum; page++ {
 		data, err := m.list(page)
 		if err != nil {
-
+			fmt.Println(err)
+			continue
 		}
 
 		arr, err := data.Get("data").Array() // 获取data
@@ -74,8 +87,7 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 
 		for _, v := range arr {
 			// 定义模块
-			var m crawler.Module
-			m.Name = "industry"
+			module := crawler.GetModule(m.Name)
 
 			item := v.(string)
 
@@ -97,9 +109,14 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 
 			report.Hash = fmt.Sprintf("%x", md5.Sum([]byte(arr[2]+report.Indname+report.Pjchange+report.Pjtype+report.Expect+day))) // 生成hash
 
-			contenturl := fmt.Sprintf("http://data.eastmoney.com/report/%s/hy,%s.html", day, arr[2])
-			report.Content = getcontent(contenturl)
-			m.Addlink(contenturl, report.Hash)
+			report.Content = ""
+			ok := module.HasHash(report.Hash)
+			if ok {
+				contenturl := fmt.Sprintf("http://data.eastmoney.com/report/%s/hy,%s.html", day, arr[2])
+				report.Content = getcontent(contenturl)
+				module.AddHash(report.Hash) // 加入哈希库
+				module.AddData(&report)
+			}
 		}
 	}
 
@@ -109,10 +126,11 @@ func (m ReportIndustry) parsehyreport(pageNum int) bool {
 func getcontent(url string) string {
 	defer func() {
 		if err := recover(); err != nil {
+			fmt.Println("get content fail")
 			fmt.Println(err)
 		}
 	}()
-	html, err := crawler.Request(url).Retry(5).Transcoding("gbk").Download().Html()
+	html, err := crawler.Request(url).Retry(10).Delay(10).Download().Html()
 	if err != nil {
 		fmt.Println(err)
 		return ""

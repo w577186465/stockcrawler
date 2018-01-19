@@ -5,9 +5,9 @@ import (
 )
 
 type Module struct {
-	Id int
-	Name string
-	Alias string
+	Id        int
+	Name      string
+	Alias     string
 	HashTable string
 	DataTable string
 }
@@ -23,9 +23,9 @@ func Initdb() {
 }
 
 // 获取模块信息
-func GetModule (name string) Module {
-	module := Module{Name: name}
-	DB.Find(&module)
+func GetModule(name string) Module {
+	module := Module{}
+	DB.Where("name = ?", name).Find(&module)
 	return module
 }
 
@@ -34,9 +34,14 @@ func CreateModule(link bool, name string, alias string, model interface{}) {
 	dataTable := fmt.Sprintf("%s_data", name)  // 信息库表名
 	linkTable := fmt.Sprintf("%s_hashs", name) // 链接库表名
 
+	module := Module{Name: name, Alias: alias, HashTable: linkTable, DataTable: dataTable}
+	if err := DB.Create(&module).Error; err != nil {
+		panic(err)
+	}
+
 	// 创建信息库
 	if err := DB.Table(dataTable).CreateTable(model).Error; err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	if link {
@@ -45,20 +50,21 @@ func CreateModule(link bool, name string, alias string, model interface{}) {
 		CreateHashTable(linkTable) // 创建链接库
 	}
 
-	DB.Create(&Module{Name: name, Alias: alias, HashTable: linkTable, DataTable: dataTable})
-	
-
-	fmt.Printf("%s模块创建成功\r\n", name)
+	fmt.Printf(" %s 模块创建成功\r\n", alias)
 }
 
 // 创建链接库
 func CreateLinkTable(name string) {
-	DB.Table(name).CreateTable(&Link{})
+	if err := DB.Table(name).CreateTable(&Link{}).Error; err != nil {
+		panic(err)
+	}
 }
 
 // 创建哈希库
 func CreateHashTable(name string) {
-	DB.Table(name).CreateTable(&Hash{})
+	if err := DB.Table(name).CreateTable(&Hash{}).Error; err != nil {
+		panic(err)
+	}
 }
 
 // 增加链接
@@ -76,18 +82,30 @@ func (m Module) Addlink(link, hash string) {
 }
 
 // 增加哈希值
-func (m Module) AddHash(hash string) {
+func (m Module) AddHash(hash string) bool {
 	table := m.HashTable
 
 	// 判断重复
-	find := Link{
-		Hash: hash,
+	find := Link{}
+	DB.Table(table).Where("hash = ?", hash).First(&find)
+	if find.ID != 0 {
+		return false
 	}
-	DB.Table(table).Find(&find)
 
 	add := Hash{Hash: hash}
 	DB.Table(table).Create(&add)
-} 
+	return true
+}
+
+func (m Module) HasHash(hash string) bool {
+	table := m.HashTable
+	find := Link{}
+	DB.Table(table).Where("hash = ?", hash).First(&find)
+	if find.ID != 0 {
+		return false
+	}
+	return true
+}
 
 // 设置链接采集成功状态
 func (m Module) LinkSuccess(id int) {
@@ -98,5 +116,5 @@ func (m Module) LinkSuccess(id int) {
 
 func (m Module) AddData(data interface{}) {
 	table := m.DataTable // 数据表
-	fmt.Println(DB.Table(table).Create(data).Error)
+	DB.Table(table).Create(data)
 }

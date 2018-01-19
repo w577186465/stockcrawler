@@ -3,8 +3,9 @@ package main
 import (
 	"crawler"
 	"crawlers"
-	"testing"
 	"fmt"
+	// "net/http"
+	"testing"
 )
 
 type TestModel struct {
@@ -14,6 +15,16 @@ type TestModel struct {
 
 func Test_initdb(t *testing.T) {
 	crawler.Initdb()
+}
+
+func Test_http(t *testing.T) {
+	var i = 0
+	for {
+		i++
+		fmt.Println(i)
+		url := "http://localhost/"
+		crawler.Request(url).Retry(10).Delay(10).Download().Json()
+	}
 }
 
 func Test_reportIndustry(t *testing.T) {
